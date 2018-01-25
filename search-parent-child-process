@@ -1,0 +1,14 @@
+#Use below command to review anamolous parents for cmd.exe and powershell.exe
+
+index=wineventlog New_Process_Name=* earliest=-60mAND EventCode=4688 
+| rename New_Process_Name as Parent, New_Process_ID as ParentID, _time as PTime
+| table host, PTime, user, Parent, ParentID
+| join usetime=true earlier=false host, user, ParentID   
+     [search index=wineventlog New_Process_Name=*
+     AND New_Process_Name IN (*cmd.exe*, *powershell*,*javaw.exe*) earliest=-60m
+| rename New_Process_ID as ChildID, New_Process_Name as Child, Process_Command_Line as ChildParameters,
+  Creator_Process_ID as ParentID, _time as CTime]
+| eval TimeDiffSeconds = CTime - PTime
+| where TimeDiffSeconds < 300 AND TimeDiffSeconds > 0
+| eval ChildTime=strftime(CTime, "%m%d%y %H:%M:%S"), ParentTime=strftime(PTime, "%m%d%y %H:%M:%S")
+| table host, user, ParentTime, ParentID, Parent, ChildTime, ChildID, Child, ChildParameters, TimeDiffSeconds
