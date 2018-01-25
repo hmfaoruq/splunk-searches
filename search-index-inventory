@@ -1,0 +1,4 @@
+# Use below command to search all indexes and respective hosts to create weekly and montly reports
+| metasearch index=* host=* | timechart span=1d dc(host) by index useother=false limit=0
+
+
