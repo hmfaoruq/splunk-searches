@@ -1,0 +1,20 @@
+# Splunk Data sources should be CIM Compliant.
+
+| tstats summariesonly=true 
+sum(All_Traffic.bytes_in) AS bytes_in 
+sum avg(All_Traffic.bytes_out) AS bytes_out
+sum avg(All_Traffic.elapsed_time) AS duration 
+from datamodel=Network_Traffic 
+where 
+(nodename = All_Traffic)
+(All_Traffic.dest_port=9090) 
+(All_Traffic.bytes_out>0) 
+(All_Traffic.bytes_in>0)
+groupby All_Traffic.src 
+| rename All_Traffic.* AS * 
+| eval total_bytes_out = round(bytes_out,0)
+| eval total_bytes_in = round(bytes_in,0)
+| eval total_duration = round(duration,0)
+| fit KMeans "total_bytes_out", "total_bytes_in" k=3 into "cluster_bytesin_bytesout_src_proxy" 
+| fields cluster total_bytes_out, total_bytes_in, total_duration, src, cluster_distance
+| sort -total_bytes_out
