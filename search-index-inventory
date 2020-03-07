@@ -1,4 +1,4 @@
-# Use below command to search all indexes and respective hosts to create weekly and montly reports
+# Use below command to search all active indexes and respective hosts ingesting data to splunk. This can be used to create weekly and montly reports
 | metasearch index=* host=* | timechart span=1d dc(host) by index useother=false limit=0
 
 
