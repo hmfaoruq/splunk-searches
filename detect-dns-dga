@@ -1,0 +1,27 @@
+# Use Splunk Machine Learning Toolkit to detect DGAs in DNS Traffic Logs.
+
+index=dns 
+AND query=*.* 
+AND query!=_*
+AND NOT query IN (*.arpa,*.local)
+| table query
+| dedup query
+| rename query AS url
+| urlparser
+| rename url as domain, url_subdomain as subdomain
+| table domain subdomain type subtype
+| dedup subdomain 
+| `ut_shannon(subdomain)` 
+| `ut_meaning(subdomain)`
+| eval ut_digit_ratio = 0.0 
+| eval ut_vowel_ratio = 0.0 
+| eval ut_domain_length = max(1,len(domain)) 
+| rex field=subdomain max_match=0 "(?&lt;digits&gt;\d)" 
+| rex field=subdomain max_match=0 "(?&lt;vowels&gt;[aieou])" 
+| eval ut_digit_ratio=if(isnull(digits),0.0,mvcount(digits) / ut_domain_length) 
+| eval ut_vowel_ratio=if(isnull(vowels),0.0,mvcount(vowels) / ut_domain_length) 
+| eval ut_consonant_ratio = max(0.0, 1.000000 - ut_digit_ratio - ut_vowel_ratio) 
+| eval ut_vc_ratio = ut_vowel_ratio / ut_consonant_ratio 
+| fields - digits - vowels
+| fit TFIDF analyzer=char ngram_range=1-3 subdomain into "DNS_DGA_TIDIF_PREPROCESS_MIX_D865K_L1M"
+| fit PCA subdomain_* k=3
