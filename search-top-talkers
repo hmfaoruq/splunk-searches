@@ -1,0 +1,16 @@
+# Heavy data ingress or egress to your Data Center or Enterprise perimeter.
+
+sourcetype=* AND bytes=*
+| convert timeformat="%m/%d/%Y %H:%M" ctime(_time) as timeMin
+| stats sum(bytes_in) as bytesIn sum(bytes_out) as bytesOut by timeMin src_ip dest_ip bytes
+| eval uploadDelta=if(bytesOut>bytesIn*(5), "upload", "")
+| eval downloadDelta=if(bytesIn>bytesOut*(1.1), "download", "")
+| table timeMin src_ip dest_ip bytesIn downloadDelta bytesOut uploadDelta
+| where (uploadDelta="upload")
+| stats sum(bytesOut) as uploadBytes sum(bytesIn) as downloadBytes by src dest
+| where uploadBytes>(2*1048576)
+| iplocation dest_ip
+| sort - uploadBytes
+| eval "uploadBytes_deltaFactor_5"=if($uploadBytes$>1073741824, tostring(round($uploadBytes$/1073741824,2))+" GB", if($uploadBytes$>1048576, tostring(round($uploadBytes$/1048576,2))+" MB", if($uploadBytes$>1024, tostring(round($uploadBytes$/1024))+" KB", tostring($uploadBytes$)+" B")))
+| eval "downloadBytes_deltaFactor_1.1"=if($downloadBytes$>1073741824, tostring(round($downloadBytes$/1073741824,2))+" GB", if($downloadBytes$>1048576, tostring(round($downloadBytes$/1048576,2))+" MB", if($downloadBytes$>1024, tostring(round($downloadBytes_deltaFactor_10$/1024))+" KB", tostring($downloadBytes$)+" B")))
+| fields - uploadBytes - downloadBytes - lon - lat - City
