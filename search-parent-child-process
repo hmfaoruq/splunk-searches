@@ -1,4 +1,4 @@
-#Use below command to review anamolous parents for cmd.exe and powershell.exe
+#Use below command to review anamolous parents invoking cmd.exe and powershell.exe. This can parse Windows 7 and older versions security logs. 
 
 index=wineventlog New_Process_Name=* earliest=-60mAND EventCode=4688 
 | rename New_Process_Name as Parent, New_Process_ID as ParentID, _time as PTime
